@@ -14,7 +14,14 @@
     "test:coverage": "vitest --coverage",
     "lint": "eslint src",
     "format": "prettier --write src",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "tsup": {
+    "entry": ["src/index.ts"],
+    "format": ["esm"],
+    "dts": true,
+    "clean": true
   },
   "keywords": [
     "claude-code",
