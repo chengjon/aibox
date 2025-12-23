@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "aibox": "dist/cli.js"
+    "aibox": "dist/index.js"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
