@@ -1,0 +1,78 @@
+{
+  "name": "@iflow/aibox",
+  "version": "0.1.0",
+  "description": "Claude Code SACMP unified management tool - Manage Skills/Agents/Commands/MCP/Plugins and Marketplaces",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "aibox": "dist/cli.js"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src",
+    "format": "prettier --write src",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "claude-code",
+    "claude",
+    "anthropic",
+    "skills",
+    "agents",
+    "plugins",
+    "mcp",
+    "sacmp",
+    "cli",
+    "tui"
+  ],
+  "author": "iflow <chengjon@iflow.cc>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chengjon/aibox.git"
+  },
+  "bugs": {
+    "url": "https://github.com/chengjon/aibox/issues"
+  },
+  "homepage": "https://github.com/chengjon/aibox#readme",
+  "dependencies": {
+    "commander": "^12.0.0",
+    "blessed": "^0.1.81",
+    "axios": "^1.6.0",
+    "js-yaml": "^4.1.0",
+    "better-sqlite3": "^9.2.0",
+    "mongodb": "^6.3.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.0",
+    "inquirer": "^9.2.0",
+    "listr2": "^8.0.0",
+    "execa": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/blessed": "^0.1.21",
+    "@types/inquirer": "^9.0.0",
+    "@types/js-yaml": "^4.0.0",
+    "@types/better-sqlite3": "^7.6.8",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0",
+    "@vitest/coverage-v8": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
+}
