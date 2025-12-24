@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { homedir } from 'os';
 import * as yaml from 'js-yaml';
 import { Config, ProjectConfig } from '../../types';
 
@@ -7,7 +8,7 @@ const DEFAULT_CONFIG: Config = {
   version: '1.0',
   database: {
     type: 'sqlite',
-    sqlite: { path: '~/.aibox/data/registry.db' }
+    sqlite: { path: join(homedir(), '.aibox/data/registry.db') }
   },
   defaultScope: 'user',
   builtinMarketplaces: [
@@ -34,7 +35,14 @@ const DEFAULT_CONFIG: Config = {
 };
 
 export class ConfigManager {
-  constructor(private configDir: string) {}
+  private actualConfigDir: string;
+
+  constructor(configDir: string) {
+    // Expand tilde if present
+    this.actualConfigDir = configDir.startsWith('~')
+      ? join(homedir(), configDir.slice(1))
+      : configDir;
+  }
 
   async read(scope: 'global' | 'project'): Promise<Config | ProjectConfig> {
     const configPath = this.getConfigPath(scope);
@@ -101,7 +109,7 @@ export class ConfigManager {
 
   private getConfigPath(scope: 'global' | 'project'): string {
     if (scope === 'global') {
-      return join(this.configDir, 'config.yaml');
+      return join(this.actualConfigDir, 'config.yaml');
     }
     return join(process.cwd(), '.claude', 'aibox-project.yaml');
   }
