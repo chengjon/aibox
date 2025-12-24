@@ -1,10 +1,10 @@
-import { InstalledComponent, Component } from '../../types';
+import { InstalledComponent } from '../../types';
 import { mkdirSync, existsSync, renameSync, rmSync } from 'fs';
 import { join } from 'path';
 import { GitHubMarketplace } from '../../integrations/marketplaces/github-marketplace';
 import { SQLiteAdapter } from '../../storage/database/sqlite-adapter';
 import { tmpdir } from 'os';
-import { ValidationError, InstallationError } from '../errors';
+import { InstallationError } from '../errors';
 import { getComponentPath } from '../paths';
 
 export interface InstallOptions {
@@ -12,7 +12,6 @@ export interface InstallOptions {
   marketplace: string;
   scope: 'global' | 'project' | 'local';
   force?: boolean;
-  skipDeps?: boolean;
 }
 
 export class PackageInstaller {
@@ -106,9 +105,5 @@ export class PackageInstaller {
     if (!existsSync(skillPath)) {
       throw new InstallationError(`SKILL.md not found`, { componentPath: path });
     }
-  }
-
-  private validateScope(scope: string): scope is 'global' | 'project' | 'local' {
-    return ['global', 'project', 'local'].includes(scope);
   }
 }
