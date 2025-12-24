@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import { writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { platform } from 'os';
 
 export enum ReloadResult {
   SUCCESS = 'success',
@@ -20,19 +21,40 @@ export interface ClaudeProcess {
 export class HotReloadSignaler {
   async detectClaudeProcess(): Promise<ClaudeProcess | null> {
     try {
-      // Try to find Claude Code process
-      const output = execSync('pgrep -f "claude" || true', { encoding: 'utf-8' });
-      const pids = output.trim().split('\n').filter(Boolean);
+      if (platform() === 'win32') {
+        // Windows: Use tasklist to find node.exe processes
+        const output = execSync('tasklist /FI "IMAGENAME eq node.exe" /FO CSV /NH', { encoding: 'utf-8' });
+        const lines = output.trim().split('\n').filter(Boolean);
 
-      if (pids.length === 0) {
+        for (const line of lines) {
+          const parts = line.split(',');
+          if (parts.length >= 2) {
+            const pid = parseInt(parts[1].replace(/"/g, '').trim());
+            if (!isNaN(pid)) {
+              return {
+                pid,
+                version: '1.0.0',
+                supportsHotReload: true
+              };
+            }
+          }
+        }
         return null;
-      }
+      } else {
+        // Unix/Linux/macOS: Use pgrep
+        const output = execSync('pgrep -f "claude" || true', { encoding: 'utf-8' });
+        const pids = output.trim().split('\n').filter(Boolean);
 
-      return {
-        pid: parseInt(pids[0]),
-        version: '1.0.0',
-        supportsHotReload: true
-      };
+        if (pids.length === 0) {
+          return null;
+        }
+
+        return {
+          pid: parseInt(pids[0]),
+          version: '1.0.0',
+          supportsHotReload: true
+        };
+      }
     } catch {
       return null;
     }
@@ -50,8 +72,8 @@ export class HotReloadSignaler {
       return await this.signalViaFile(projectPath);
     }
 
-    // Try Unix signal
-    return await this.signalViaUnixSignal(process.pid);
+    // Try platform-specific signaling
+    return await this.signalViaProcessSignal(process.pid);
   }
 
   async awaitReload(timeout: number): Promise<boolean> {
@@ -78,11 +100,18 @@ export class HotReloadSignaler {
     }
   }
 
-  private async signalViaUnixSignal(pid: number): Promise<ReloadResult> {
+  private async signalViaProcessSignal(pid: number): Promise<ReloadResult> {
     try {
-      // Send SIGUSR1 to Claude Code process
-      execSync(`kill -SIGUSR1 ${pid}`);
-      return ReloadResult.SUCCESS;
+      if (platform() === 'win32') {
+        // Windows: Use taskkill to send a signal
+        // Note: Windows doesn't support Unix signals, so we use a workaround
+        execSync(`taskkill /PID ${pid} /SIGINT`, { stdio: 'pipe' });
+        return ReloadResult.SUCCESS;
+      } else {
+        // Unix/Linux/macOS: Send SIGUSR1 to Claude Code process
+        execSync(`kill -SIGUSR1 ${pid}`);
+        return ReloadResult.SUCCESS;
+      }
     } catch {
       return ReloadResult.ERROR;
     }
