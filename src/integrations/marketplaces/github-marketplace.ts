@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { MarketplaceClient } from './marketplace-client';
 import { MarketplaceMetadata, ComponentInfo } from '../../types';
-import { execSync } from 'child_process';
-import { existsSync, rmSync } from 'fs';
+import { execa } from 'execa';
+import { existsSync, rmSync, cpSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { ComponentNotFoundError, MarketplaceError, ValidationError } from '../../core/errors';
@@ -82,19 +82,19 @@ export class GitHubMarketplace implements MarketplaceClient {
     const tmpDir = join(tmpdir(), `aibox-download-${Date.now()}`);
 
     try {
-      // Clone the repository to temporary directory
+      // Clone the repository to temporary directory using execa for safer command execution
       const cloneUrl = `https://github.com/${this.owner}/${this.repo}.git`;
-      execSync(`git clone --depth 1 ${cloneUrl} ${tmpDir}`, { stdio: 'inherit' });
+      await execa('git', ['clone', '--depth', '1', cloneUrl, tmpDir]);
 
       // Find the component directory
       const componentSourcePath = join(tmpDir, 'skills', name);
       const componentAltPath = join(tmpDir, name);
 
       if (existsSync(componentSourcePath)) {
-        // Copy component to target path
-        execSync(`cp -r "${componentSourcePath}" "${targetPath}"`, { stdio: 'inherit' });
+        // Copy component to target path using Node.js API
+        cpSync(componentSourcePath, targetPath, { recursive: true });
       } else if (existsSync(componentAltPath)) {
-        execSync(`cp -r "${componentAltPath}" "${targetPath}"`, { stdio: 'inherit' });
+        cpSync(componentAltPath, targetPath, { recursive: true });
       } else {
         throw new MarketplaceError(`Component "${name}" not found in repository`, {
           component: name,
