@@ -5,6 +5,7 @@ import { dirname } from 'path';
 import { Component, ComponentType, Scope } from '../../types';
 import { ComponentRepository } from './component-repository';
 import { getLogger } from '../../core/logger';
+import { MigrationRunner, Migration } from './migrations';
 
 const logger = getLogger();
 
@@ -36,43 +37,63 @@ export class SQLiteAdapter implements ComponentRepository {
     mkdirSync(dirname(this.dbPath), { recursive: true });
 
     this.db = new Database(this.dbPath);
-    await this.createTables();
+
+    // Run migrations
+    await this.runMigrations();
   }
 
-  private async createTables(): Promise<void> {
-    const createComponentsTable = `
-      CREATE TABLE IF NOT EXISTS components (
-        id TEXT PRIMARY KEY,
-        type TEXT NOT NULL,
-        name TEXT NOT NULL,
-        version TEXT,
-        description TEXT,
-        source_type TEXT,
-        source_location TEXT,
-        marketplace TEXT,
-        metadata_json TEXT,
-        scope TEXT,
-        project_path TEXT,
-        installed_at TEXT,
-        enabled INTEGER DEFAULT 1,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(type, name)
-      )
-    `;
+  /**
+   * Register and run database migrations
+   */
+  private async runMigrations(): Promise<void> {
+    const runner = new MigrationRunner(this.db);
 
-    this.db.exec(createComponentsTable);
+    // Register initial schema migration (version 1)
+    const initialMigration: Migration = {
+      version: 1,
+      name: 'initial_schema',
+      up: (db) => {
+        // Create components table
+        const createComponentsTable = `
+          CREATE TABLE IF NOT EXISTS components (
+            id TEXT PRIMARY KEY,
+            type TEXT NOT NULL,
+            name TEXT NOT NULL,
+            version TEXT,
+            description TEXT,
+            source_type TEXT,
+            source_location TEXT,
+            marketplace TEXT,
+            metadata_json TEXT,
+            scope TEXT,
+            project_path TEXT,
+            installed_at TEXT,
+            enabled INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(type, name)
+          )
+        `;
+        db.exec(createComponentsTable);
 
-    // Create indexes for better query performance
-    const createIndexes = [
-      'CREATE INDEX IF NOT EXISTS idx_components_type ON components(type)',
-      'CREATE INDEX IF NOT EXISTS idx_components_scope ON components(scope)',
-      'CREATE INDEX IF NOT EXISTS idx_components_enabled ON components(enabled)',
-      'CREATE INDEX IF NOT EXISTS idx_components_type_scope ON components(type, scope)'
-    ];
+        // Create indexes
+        const createIndexes = [
+          'CREATE INDEX IF NOT EXISTS idx_components_type ON components(type)',
+          'CREATE INDEX IF NOT EXISTS idx_components_scope ON components(scope)',
+          'CREATE INDEX IF NOT EXISTS idx_components_enabled ON components(enabled)',
+          'CREATE INDEX IF NOT EXISTS idx_components_type_scope ON components(type, scope)'
+        ];
 
-    for (const indexSql of createIndexes) {
-      this.db.exec(indexSql);
-    }
+        for (const indexSql of createIndexes) {
+          db.exec(indexSql);
+        }
+
+        logger.info('Initial schema created');
+      }
+    };
+
+    runner.register(initialMigration);
+    runner.migrateUp();
+    logger.info('Migrations completed', { version: runner.getCurrentVersion() });
   }
 
   async addComponent(component: Component): Promise<void> {
