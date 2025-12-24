@@ -220,12 +220,24 @@ export class SQLiteAdapter {
         location: row.source_location,
         marketplace: row.marketplace
       },
-      metadata: JSON.parse(row.metadata_json || '{}'),
+      metadata: this.parseMetadata(row.metadata_json),
       scope: row.scope,
       projectPath: row.project_path,
       installedAt: new Date(row.installed_at),
       enabled: row.enabled === 1,
       dependencies: []
     };
+  }
+
+  private parseMetadata(jsonString: string | null): Record<string, unknown> {
+    if (!jsonString || jsonString.trim() === '') {
+      return {};
+    }
+    try {
+      return JSON.parse(jsonString) as Record<string, unknown>;
+    } catch (error) {
+      console.warn(`Failed to parse metadata JSON: ${error}`);
+      return {};
+    }
   }
 }
