@@ -4,12 +4,13 @@ import { homedir } from 'os';
 import * as yaml from 'js-yaml';
 import { Config, ProjectConfig } from '../../types';
 import { ConfigError } from '../../core/errors';
+import { getDatabasePath, getConfigPath, expandTilde } from '../../core/paths';
 
 const DEFAULT_CONFIG: Config = {
   version: '1.0',
   database: {
     type: 'sqlite',
-    sqlite: { path: join(homedir(), '.aibox/data/registry.db') }
+    sqlite: { path: getDatabasePath() }
   },
   defaultScope: 'user',
   builtinMarketplaces: [
@@ -40,9 +41,7 @@ export class ConfigManager {
 
   constructor(configDir: string) {
     // Expand tilde if present
-    this.actualConfigDir = configDir.startsWith('~')
-      ? join(homedir(), configDir.slice(1))
-      : configDir;
+    this.actualConfigDir = expandTilde(configDir);
   }
 
   async read(scope: 'global' | 'project'): Promise<Config | ProjectConfig> {
@@ -112,7 +111,7 @@ export class ConfigManager {
     if (scope === 'global') {
       return join(this.actualConfigDir, 'config.yaml');
     }
-    return join(process.cwd(), '.claude', 'aibox-project.yaml');
+    return getConfigPath('project');
   }
 
   private getDefaultProjectConfig(): ProjectConfig {

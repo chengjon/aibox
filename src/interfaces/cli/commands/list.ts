@@ -1,8 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { SQLiteAdapter } from '../../../storage/database/sqlite-adapter';
-import { join } from 'path';
-import { homedir } from 'os';
+import { getDatabasePath } from '../../../core/paths';
 
 export function createListCommand(): Command {
   const cmd = new Command('list');
@@ -11,8 +10,7 @@ export function createListCommand(): Command {
     .option('-t, --type <type>', 'Filter by component type')
     .option('-s, --scope <scope>', 'Filter by scope', 'all')
     .action(async (options) => {
-      const dbPath = join(homedir(), '.aibox', 'data', 'registry.db');
-      const adapter = new SQLiteAdapter(dbPath);
+      const adapter = new SQLiteAdapter(getDatabasePath());
       await adapter.initialize();
 
       try {

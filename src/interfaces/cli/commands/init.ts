@@ -3,12 +3,13 @@ import chalk from 'chalk';
 import { mkdirSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import * as yaml from 'js-yaml';
+import { getProjectClaudeDir } from '../../../core/paths';
 
 export function createInitCommand(): Command {
   const cmd = new Command('init');
 
   cmd.action(async () => {
-    const claudeDir = join(process.cwd(), '.claude');
+    const claudeDir = getProjectClaudeDir();
 
     if (existsSync(claudeDir)) {
       console.log(chalk.yellow('.claude directory already exists'));

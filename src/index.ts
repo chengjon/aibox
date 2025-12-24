@@ -8,15 +8,14 @@ import { SQLiteAdapter } from './storage/database/sqlite-adapter';
 import { createInstallCommand } from './interfaces/cli/commands/install';
 import { createListCommand } from './interfaces/cli/commands/list';
 import { createInitCommand } from './interfaces/cli/commands/init';
-import { homedir } from 'os';
-import { join } from 'path';
+import { getDatabasePath, getAIBoxHome } from './core/paths';
 
 const program = new Command();
-const configManager = new ConfigManager('~/.aibox');
+const configManager = new ConfigManager(getAIBoxHome());
 
 // Initialize marketplace and database adapter
 const marketplace = new GitHubMarketplace('anthropic', 'agent-skills');
-const dbAdapter = new SQLiteAdapter(join(homedir(), '.aibox/data/registry.db'));
+const dbAdapter = new SQLiteAdapter(getDatabasePath());
 const installer = new PackageInstaller(marketplace, dbAdapter);
 
 program

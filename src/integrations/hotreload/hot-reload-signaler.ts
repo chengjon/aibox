@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import { writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { platform } from 'os';
+import { getHotReloadMarkerPath } from '../../core/paths';
 
 export enum ReloadResult {
   SUCCESS = 'success',
@@ -85,7 +86,7 @@ export class HotReloadSignaler {
 
   private async signalViaFile(projectPath: string): Promise<ReloadResult> {
     try {
-      const markerPath = join(projectPath, '.claude', '.reload');
+      const markerPath = getHotReloadMarkerPath(projectPath);
       writeFileSync(markerPath, Date.now().toString());
 
       // Wait for file to be deleted (Claude Code picks it up)

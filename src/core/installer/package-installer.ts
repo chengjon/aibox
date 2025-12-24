@@ -5,6 +5,7 @@ import { GitHubMarketplace } from '../../integrations/marketplaces/github-market
 import { SQLiteAdapter } from '../../storage/database/sqlite-adapter';
 import { homedir } from 'os';
 import { ValidationError, InstallationError } from '../errors';
+import { getComponentPath } from '../paths';
 
 export interface InstallOptions {
   name: string;
@@ -98,18 +99,7 @@ export class PackageInstaller {
   }
 
   private getInstallPath(scope: string): string {
-    const os = require('os');
-    const homedir = os.homedir();
-    switch (scope) {
-      case 'user':
-        return join(homedir, '.aibox', 'components', 'skills');
-      case 'project':
-        return join(process.cwd(), '.claude', 'skills');
-      case 'local':
-        return join(process.cwd(), '.aibox', 'components', 'skills');
-      default:
-        throw new ValidationError(`Invalid scope: ${scope}`, { scope, validScopes: ['user', 'project', 'local'] });
-    }
+    return getComponentPath('skills', scope as 'user' | 'project' | 'local');
   }
 
   private async validateComponent(path: string): Promise<void> {
