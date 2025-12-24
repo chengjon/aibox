@@ -1,6 +1,9 @@
-import { InstalledComponent } from '../../types';
-import { mkdirSync, existsSync } from 'fs';
+import { InstalledComponent, Component } from '../../types';
+import { mkdirSync, existsSync, mkdirSync as fsMkdirSync } from 'fs';
 import { join } from 'path';
+import { GitHubMarketplace } from '../../integrations/marketplaces/github-marketplace';
+import { SQLiteAdapter } from '../../storage/database/sqlite-adapter';
+import { homedir } from 'os';
 
 export interface InstallOptions {
   name: string;
@@ -11,6 +14,11 @@ export interface InstallOptions {
 }
 
 export class PackageInstaller {
+  constructor(
+    private marketplace?: GitHubMarketplace,
+    private dbAdapter?: SQLiteAdapter
+  ) {}
+
   async install(options: InstallOptions): Promise<InstalledComponent> {
     // Determine installation path
     const installPath = this.getInstallPath(options.scope);
@@ -18,34 +26,74 @@ export class PackageInstaller {
     // Create directory if needed
     mkdirSync(installPath, { recursive: true });
 
-    // Download component (placeholder for now)
-    const componentPath = join(installPath, options.name);
+    // Step 1: Fetch component info from marketplace
+    if (!this.marketplace) {
+      this.marketplace = this.getDefaultMarketplace(options.marketplace);
+    }
 
-    // Validate component
-    await this.validateComponent(componentPath);
+    const componentInfo = await this.marketplace.getComponent(options.name);
 
-    // Create component record
-    const component: InstalledComponent = {
-      id: `${options.name}-${Date.now()}`,
-      name: options.name,
-      type: 'skill', // Auto-detect later
-      version: '1.0.0',
-      description: `Installed from ${options.marketplace}`,
-      source: {
-        type: 'marketplace',
-        location: options.marketplace,
-        marketplace: options.marketplace
-      },
-      metadata: {},
-      scope: options.scope,
-      projectPath: options.scope === 'project' ? process.cwd() : undefined,
-      installedAt: new Date(),
-      enabled: true,
-      dependencies: [],
-      path: componentPath
-    };
+    // Step 2: Download to temp directory
+    const tmpDir = join(require('os').tmpdir(), `aibox-install-${Date.now()}`);
+    fsMkdirSync(tmpDir, { recursive: true });
 
-    return component;
+    try {
+      await this.marketplace.downloadComponent(options.name, tmpDir);
+
+      // Step 3: Validate component
+      await this.validateComponent(tmpDir);
+
+      // Step 4: Move to install path
+      const componentPath = join(installPath, options.name);
+      const { execSync } = require('child_process');
+      execSync(`mv "${tmpDir}" "${componentPath}"`, { stdio: 'inherit' });
+
+      // Step 5: Create component record
+      const component: InstalledComponent = {
+        id: `${options.name}-${Date.now()}`,
+        name: options.name,
+        type: 'skill',
+        version: componentInfo.version || '1.0.0',
+        description: componentInfo.description || `Installed from ${options.marketplace}`,
+        source: {
+          type: 'marketplace',
+          location: options.marketplace,
+          marketplace: options.marketplace
+        },
+        metadata: {},
+        scope: options.scope,
+        projectPath: options.scope === 'project' ? process.cwd() : undefined,
+        installedAt: new Date(),
+        enabled: true,
+        dependencies: [],
+        path: componentPath
+      };
+
+      // Step 6: Save to database
+      if (this.dbAdapter) {
+        await this.dbAdapter.initialize();
+        await this.dbAdapter.addComponent(component);
+      }
+
+      return component;
+    } catch (error) {
+      // Clean up on failure
+      const { rmSync } = require('fs');
+      if (existsSync(tmpDir)) {
+        rmSync(tmpDir, { recursive: true, force: true });
+      }
+      throw error;
+    }
+  }
+
+  private getDefaultMarketplace(name: string): GitHubMarketplace {
+    // Parse marketplace name (format: "owner/repo" or just "repo")
+    if (name.includes('/')) {
+      const [owner, repo] = name.split('/');
+      return new GitHubMarketplace(owner, repo);
+    }
+    // Default to anthropic/agent-skills
+    return new GitHubMarketplace('anthropic', 'agent-skills');
   }
 
   private getInstallPath(scope: string): string {

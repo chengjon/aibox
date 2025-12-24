@@ -3,13 +3,21 @@
 import { Command } from 'commander';
 import { ConfigManager } from './storage/config/config-manager';
 import { PackageInstaller } from './core/installer/package-installer';
+import { GitHubMarketplace } from './integrations/marketplaces/github-marketplace';
+import { SQLiteAdapter } from './storage/database/sqlite-adapter';
 import { createInstallCommand } from './interfaces/cli/commands/install';
 import { createListCommand } from './interfaces/cli/commands/list';
 import { createInitCommand } from './interfaces/cli/commands/init';
+import { homedir } from 'os';
+import { join } from 'path';
 
 const program = new Command();
 const configManager = new ConfigManager('~/.aibox');
-const installer = new PackageInstaller();
+
+// Initialize marketplace and database adapter
+const marketplace = new GitHubMarketplace('anthropic', 'agent-skills');
+const dbAdapter = new SQLiteAdapter(join(homedir(), '.aibox/data/registry.db'));
+const installer = new PackageInstaller(marketplace, dbAdapter);
 
 program
   .name('aibox')
