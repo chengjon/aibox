@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { MarketplaceClient } from './marketplace-client';
 import { MarketplaceMetadata, ComponentInfo } from '../../types';
 import { execa } from 'execa';
 import { existsSync, rmSync, cpSync } from 'fs';
@@ -10,7 +9,7 @@ import { ComponentNotFoundError, InstallationError, ValidationError } from '../.
 // Validate GitHub repository name format (alphanumeric, hyphens, underscores)
 const REPO_NAME_REGEX = /^[a-zA-Z0-9_-]+$/;
 
-export class GitHubMarketplace implements MarketplaceClient {
+export class GitHubMarketplace {
   constructor(
     private owner: string,
     private repo: string,
