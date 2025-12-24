@@ -3,6 +3,7 @@ import { join } from 'path';
 import { mkdirSync } from 'fs';
 import { dirname } from 'path';
 import { Component, ComponentType, Scope } from '../../types';
+import { ComponentRepository } from './component-repository';
 
 // Database row interface for type safety
 interface ComponentRow {
@@ -22,7 +23,7 @@ interface ComponentRow {
   created_at: string;
 }
 
-export class SQLiteAdapter {
+export class SQLiteAdapter implements ComponentRepository {
   private db: Database.Database;
 
   constructor(private dbPath: string) {}
