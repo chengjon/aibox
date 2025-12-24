@@ -1,9 +1,9 @@
 import { InstalledComponent, Component } from '../../types';
-import { mkdirSync, existsSync, mkdirSync as fsMkdirSync } from 'fs';
+import { mkdirSync, existsSync, renameSync, rmSync } from 'fs';
 import { join } from 'path';
 import { GitHubMarketplace } from '../../integrations/marketplaces/github-marketplace';
 import { SQLiteAdapter } from '../../storage/database/sqlite-adapter';
-import { homedir } from 'os';
+import { tmpdir } from 'os';
 import { ValidationError, InstallationError } from '../errors';
 import { getComponentPath } from '../paths';
 
@@ -36,8 +36,8 @@ export class PackageInstaller {
     const componentInfo = await this.marketplace.getComponent(options.name);
 
     // Step 2: Download to temp directory
-    const tmpDir = join(require('os').tmpdir(), `aibox-install-${Date.now()}`);
-    fsMkdirSync(tmpDir, { recursive: true });
+    const tmpDir = join(tmpdir(), `aibox-install-${Date.now()}`);
+    mkdirSync(tmpDir, { recursive: true });
 
     try {
       await this.marketplace.downloadComponent(options.name, tmpDir);
@@ -47,8 +47,7 @@ export class PackageInstaller {
 
       // Step 4: Move to install path
       const componentPath = join(installPath, options.name);
-      const { execSync } = require('child_process');
-      execSync(`mv "${tmpDir}" "${componentPath}"`, { stdio: 'inherit' });
+      renameSync(tmpDir, componentPath);
 
       // Step 5: Create component record
       const component: InstalledComponent = {
@@ -80,7 +79,6 @@ export class PackageInstaller {
       return component;
     } catch (error) {
       // Clean up on failure
-      const { rmSync } = require('fs');
       if (existsSync(tmpDir)) {
         rmSync(tmpDir, { recursive: true, force: true });
       }
