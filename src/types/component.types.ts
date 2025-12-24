@@ -3,7 +3,7 @@
  */
 
 export type ComponentType = 'skill' | 'plugin' | 'command' | 'agent' | 'mcp_server';
-export type Scope = 'user' | 'project' | 'local';
+export type Scope = 'global' | 'project' | 'local';
 export type SourceType = 'marketplace' | 'git' | 'local' | 'url';
 
 export interface Component {

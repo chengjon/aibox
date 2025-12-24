@@ -8,7 +8,7 @@ export function createInstallCommand(configManager: ConfigManager, installer: Pa
 
   cmd
     .argument('[name]', 'Component name with optional marketplace (name@marketplace)')
-    .option('-s, --scope <scope>', 'Installation scope', 'user')
+    .option('-s, --scope <scope>', 'Installation scope', 'global')
     .option('-f, --force', 'Force reinstall even if already installed')
     .option('--skip-deps', 'Skip dependency installation')
     .action(async (name, options) => {

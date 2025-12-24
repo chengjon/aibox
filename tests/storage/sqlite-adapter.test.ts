@@ -27,7 +27,7 @@ describe('SQLiteAdapter', () => {
       description: 'Test skill',
       source: { type: 'marketplace', location: 'test' },
       metadata: {},
-      scope: 'user',
+      scope: 'global',
       installedAt: new Date(),
       enabled: true,
       dependencies: []

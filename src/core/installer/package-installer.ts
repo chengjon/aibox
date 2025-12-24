@@ -10,7 +10,7 @@ import { getComponentPath } from '../paths';
 export interface InstallOptions {
   name: string;
   marketplace: string;
-  scope: 'user' | 'project' | 'local';
+  scope: 'global' | 'project' | 'local';
   force?: boolean;
   skipDeps?: boolean;
 }
@@ -99,7 +99,7 @@ export class PackageInstaller {
   }
 
   private getInstallPath(scope: string): string {
-    return getComponentPath('skills', scope as 'user' | 'project' | 'local');
+    return getComponentPath('skills', scope as 'global' | 'project' | 'local');
   }
 
   private async validateComponent(path: string): Promise<void> {
@@ -108,5 +108,9 @@ export class PackageInstaller {
     if (!existsSync(skillPath)) {
       throw new InstallationError(`SKILL.md not found`, { componentPath: path });
     }
+  }
+
+  private validateScope(scope: string): scope is 'global' | 'project' | 'local' {
+    return ['global', 'project', 'local'].includes(scope);
   }
 }

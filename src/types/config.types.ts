@@ -5,7 +5,7 @@
 export interface Config {
   version: string;
   database: DatabaseConfig;
-  defaultScope: 'user' | 'project' | 'local';
+  defaultScope: 'global' | 'project' | 'local';
   builtinMarketplaces: BuiltinMarketplace[];
   cache: CacheConfig;
   hotReload: HotReloadConfig;
@@ -60,7 +60,7 @@ export interface ProjectConfig {
   settings: {
     autoSync: boolean;
     hotReload: boolean;
-    scope: 'user' | 'project' | 'local';
+    scope: 'global' | 'project' | 'local';
   };
 }
 

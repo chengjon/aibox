@@ -26,9 +26,9 @@ export function getDatabasePath(): string {
   return join(getDataDir(), 'registry.db');
 }
 
-export function getComponentsDir(scope: 'user' | 'project' | 'local'): string {
+export function getComponentsDir(scope: 'global' | 'project' | 'local'): string {
   switch (scope) {
-    case 'user':
+    case 'global':
       return join(AIBOX_HOME, 'components');
     case 'project':
       return join(process.cwd(), CLAUDE_DIR);
@@ -39,7 +39,7 @@ export function getComponentsDir(scope: 'user' | 'project' | 'local'): string {
   }
 }
 
-export function getComponentPath(componentType: 'skills' | 'plugins' | 'commands' | 'agents' | 'mcp_servers', scope: 'user' | 'project' | 'local'): string {
+export function getComponentPath(componentType: 'skills' | 'plugins' | 'commands' | 'agents' | 'mcp_servers', scope: 'global' | 'project' | 'local'): string {
   const baseDir = getComponentsDir(scope);
   if (scope === 'project') {
     return join(baseDir, componentType);

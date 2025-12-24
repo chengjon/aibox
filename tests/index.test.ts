@@ -20,7 +20,7 @@ describe('aibox CLI', () => {
       const installCommand = program.commands.find(cmd => cmd.name() === 'install');
       const scopeOption = installCommand?.options.find(opt => opt.long === '--scope');
       expect(scopeOption).toBeDefined();
-      expect(scopeOption?.defaultValue).toBe('user');
+      expect(scopeOption?.defaultValue).toBe('global');
     });
   });
 
