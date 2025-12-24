@@ -10,7 +10,6 @@ export function createInstallCommand(configManager: ConfigManager, installer: Pa
     .argument('[name]', 'Component name with optional marketplace (name@marketplace)')
     .option('-s, --scope <scope>', 'Installation scope', 'global')
     .option('-f, --force', 'Force reinstall even if already installed')
-    .option('--skip-deps', 'Skip dependency installation')
     .action(async (name, options) => {
       try {
         // Validate input
@@ -38,13 +37,13 @@ export function createInstallCommand(configManager: ConfigManager, installer: Pa
           name: componentName,
           marketplace: marketplace,
           scope: options.scope,
-          force: options.force,
-          skipDeps: options.skipDeps
+          force: options.force
         });
 
         console.log(chalk.green(`✓ Installed ${component.name} v${component.version}`));
-      } catch (error: any) {
-        console.error(chalk.red(`✗ Installation failed: ${error.message}`));
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red(`✗ Installation failed: ${errorMessage}`));
         process.exit(1);
       }
     });
