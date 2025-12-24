@@ -5,7 +5,7 @@ import { execa } from 'execa';
 import { existsSync, rmSync, cpSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { ComponentNotFoundError, MarketplaceError, ValidationError } from '../../core/errors';
+import { ComponentNotFoundError, InstallationError, ValidationError } from '../../core/errors';
 
 // Validate GitHub repository name format (alphanumeric, hyphens, underscores)
 const REPO_NAME_REGEX = /^[a-zA-Z0-9_-]+$/;
@@ -96,7 +96,7 @@ export class GitHubMarketplace implements MarketplaceClient {
       } else if (existsSync(componentAltPath)) {
         cpSync(componentAltPath, targetPath, { recursive: true });
       } else {
-        throw new MarketplaceError(`Component "${name}" not found in repository`, {
+        throw new InstallationError(`Component "${name}" not found in repository`, {
           component: name,
           repo: `${this.owner}/${this.repo}`,
           searchPaths: [componentSourcePath, componentAltPath]

@@ -14,15 +14,6 @@ export class AIBoxError extends Error {
 }
 
 /**
- * Configuration-related errors
- */
-export class ConfigError extends AIBoxError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super(message, 'CONFIG_ERROR', details);
-  }
-}
-
-/**
  * Component not found errors
  */
 export class ComponentNotFoundError extends AIBoxError {
@@ -45,28 +36,10 @@ export class ValidationError extends AIBoxError {
 }
 
 /**
- * Marketplace-related errors
- */
-export class MarketplaceError extends AIBoxError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super(message, 'MARKETPLACE_ERROR', details);
-  }
-}
-
-/**
- * Installation-related errors
+ * Installation-related errors (includes marketplace operations)
  */
 export class InstallationError extends AIBoxError {
   constructor(message: string, details?: Record<string, unknown>) {
     super(message, 'INSTALLATION_ERROR', details);
-  }
-}
-
-/**
- * Database-related errors
- */
-export class DatabaseError extends AIBoxError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super(message, 'DATABASE_ERROR', details);
   }
 }
