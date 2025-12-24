@@ -4,6 +4,7 @@ import { join } from 'path';
 import { GitHubMarketplace } from '../../integrations/marketplaces/github-marketplace';
 import { SQLiteAdapter } from '../../storage/database/sqlite-adapter';
 import { homedir } from 'os';
+import { ValidationError, InstallationError } from '../errors';
 
 export interface InstallOptions {
   name: string;
@@ -107,7 +108,7 @@ export class PackageInstaller {
       case 'local':
         return join(process.cwd(), '.aibox', 'components', 'skills');
       default:
-        throw new Error(`Invalid scope: ${scope}`);
+        throw new ValidationError(`Invalid scope: ${scope}`, { scope, validScopes: ['user', 'project', 'local'] });
     }
   }
 
@@ -115,7 +116,7 @@ export class PackageInstaller {
     // Check for SKILL.md
     const skillPath = join(path, 'SKILL.md');
     if (!existsSync(skillPath)) {
-      throw new Error(`SKILL.md not found in ${path}`);
+      throw new InstallationError(`SKILL.md not found`, { componentPath: path });
     }
   }
 }

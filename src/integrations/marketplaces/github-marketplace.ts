@@ -5,6 +5,7 @@ import { execSync } from 'child_process';
 import { existsSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { ComponentNotFoundError, MarketplaceError } from '../../core/errors';
 
 export class GitHubMarketplace implements MarketplaceClient {
   constructor(
@@ -53,7 +54,7 @@ export class GitHubMarketplace implements MarketplaceClient {
     const component = components.find(c => c.name === name);
 
     if (!component) {
-      throw new Error(`Component ${name} not found`);
+      throw new ComponentNotFoundError(name, `${this.owner}/${this.repo}`);
     }
 
     return component;
@@ -78,7 +79,11 @@ export class GitHubMarketplace implements MarketplaceClient {
       } else if (existsSync(componentAltPath)) {
         execSync(`cp -r "${componentAltPath}" "${targetPath}"`, { stdio: 'inherit' });
       } else {
-        throw new Error(`Component "${name}" not found in marketplace repository`);
+        throw new MarketplaceError(`Component "${name}" not found in repository`, {
+          component: name,
+          repo: `${this.owner}/${this.repo}`,
+          searchPaths: [componentSourcePath, componentAltPath]
+        });
       }
     } finally {
       // Clean up temporary directory

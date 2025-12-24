@@ -3,6 +3,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import * as yaml from 'js-yaml';
 import { Config, ProjectConfig } from '../../types';
+import { ConfigError } from '../../core/errors';
 
 const DEFAULT_CONFIG: Config = {
   version: '1.0',
@@ -60,7 +61,7 @@ export class ConfigManager {
 
       // Basic validation
       if (!config || typeof config !== 'object') {
-        throw new Error('Invalid config format');
+        throw new ConfigError('Invalid config format', { configPath, scope });
       }
 
       return config as Config | ProjectConfig;
@@ -69,7 +70,7 @@ export class ConfigManager {
         console.warn(`Failed to load config from ${configPath}, using defaults: ${error}`);
         return DEFAULT_CONFIG;
       }
-      throw new Error(`Failed to load project config: ${error}`);
+      throw new ConfigError(`Failed to load project config`, { configPath, originalError: error });
     }
   }
 
