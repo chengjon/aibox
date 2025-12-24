@@ -12,7 +12,7 @@ const DEFAULT_CONFIG: Config = {
     type: 'sqlite',
     sqlite: { path: getDatabasePath() }
   },
-  defaultScope: 'user',
+  defaultScope: 'global',
   builtinMarketplaces: [
     {
       name: 'anthropic-agent-skills',
@@ -82,25 +82,30 @@ export class ConfigManager {
   async get<T>(key: string, defaultValue?: T, scope: 'global' | 'project' = 'global'): Promise<T> {
     const config = await this.read(scope);
     const keys = key.split('.');
-    let value: any = config;
+    let value: Record<string, unknown> | unknown = config;
 
     for (const k of keys) {
-      value = value?.[k];
+      if (typeof value === 'object' && value !== null) {
+        value = value[k];
+      } else {
+        value = undefined;
+        break;
+      }
     }
 
-    return value ?? defaultValue;
+    return (value ?? defaultValue) as T;
   }
 
-  async set(key: string, value: any, scope: 'global' | 'project' = 'global'): Promise<void> {
+  async set<T>(key: string, value: T, scope: 'global' | 'project' = 'global'): Promise<void> {
     const config = await this.read(scope);
     const keys = key.split('.');
 
-    let current: any = config;
+    let current: Record<string, unknown> = config as Record<string, unknown>;
     for (let i = 0; i < keys.length - 1; i++) {
-      if (!current[keys[i]]) {
+      if (!current[keys[i]] || typeof current[keys[i]] !== 'object') {
         current[keys[i]] = {};
       }
-      current = current[keys[i]];
+      current = current[keys[i]] as Record<string, unknown>;
     }
 
     current[keys[keys.length - 1]] = value;
