@@ -4,6 +4,9 @@ import { mkdirSync } from 'fs';
 import { dirname } from 'path';
 import { Component, ComponentType, Scope } from '../../types';
 import { ComponentRepository } from './component-repository';
+import { getLogger } from '../../core/logger';
+
+const logger = getLogger();
 
 // Database row interface for type safety
 interface ComponentRow {
@@ -163,7 +166,7 @@ export class SQLiteAdapter implements ComponentRepository {
     try {
       return JSON.parse(jsonString) as Record<string, unknown>;
     } catch (error) {
-      console.warn(`Failed to parse metadata JSON: ${error}`);
+      logger.warn('Failed to parse metadata JSON', { error, jsonString });
       return {};
     }
   }

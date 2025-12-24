@@ -5,6 +5,9 @@ import * as yaml from 'js-yaml';
 import { Config, ProjectConfig } from '../../types';
 import { ValidationError } from '../../core/errors';
 import { getDatabasePath, getConfigPath, expandTilde } from '../../core/paths';
+import { getLogger } from '../../core/logger';
+
+const logger = getLogger();
 
 const DEFAULT_CONFIG: Config = {
   version: '1.0',
@@ -66,7 +69,7 @@ export class ConfigManager {
       return config as Config | ProjectConfig;
     } catch (error) {
       if (scope === 'global') {
-        console.warn(`Failed to load config from ${configPath}, using defaults: ${error}`);
+        logger.warn(`Failed to load config from ${configPath}, using defaults`, { error, configPath });
         return DEFAULT_CONFIG;
       }
       throw new ValidationError(`Failed to load project config`, { configPath, originalError: error });
