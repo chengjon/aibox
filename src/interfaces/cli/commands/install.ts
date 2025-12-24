@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { ConfigManager } from '../../../storage/config/config-manager';
 import { PackageInstaller } from '../../../core/installer/package-installer';
+import { AIBoxError } from '../../../core/errors';
 
 export function createInstallCommand(configManager: ConfigManager, installer: PackageInstaller): Command {
   const cmd = new Command('install');
@@ -42,8 +43,20 @@ export function createInstallCommand(configManager: ConfigManager, installer: Pa
 
         console.log(chalk.green(`✓ Installed ${component.name} v${component.version}`));
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error(chalk.red(`✗ Installation failed: ${errorMessage}`));
+        if (error instanceof AIBoxError) {
+          console.error(chalk.red(`✗ Installation failed [${error.code}]`));
+          console.error(chalk.red(`  ${error.message}`));
+          if (error.details && Object.keys(error.details).length > 0) {
+            console.error(chalk.dim('  Details:'));
+            for (const [key, value] of Object.entries(error.details)) {
+              console.error(chalk.dim(`    ${key}: ${JSON.stringify(value)}`));
+            }
+          }
+        } else if (error instanceof Error) {
+          console.error(chalk.red(`✗ Installation failed: ${error.message}`));
+        } else {
+          console.error(chalk.red('✗ Installation failed: Unknown error'));
+        }
         process.exit(1);
       }
     });
