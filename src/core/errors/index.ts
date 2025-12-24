@@ -11,16 +11,6 @@ export class AIBoxError extends Error {
     this.name = this.constructor.name;
     Error.captureStackTrace(this, this.constructor);
   }
-
-  toJSON(): Record<string, unknown> {
-    return {
-      name: this.name,
-      message: this.message,
-      code: this.code,
-      details: this.details,
-      stack: this.stack
-    };
-  }
 }
 
 /**
