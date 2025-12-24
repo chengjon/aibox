@@ -13,13 +13,9 @@ export interface Config {
 }
 
 export interface DatabaseConfig {
-  type: 'sqlite' | 'mongodb';
-  sqlite?: {
+  type: 'sqlite';
+  sqlite: {
     path: string;
-  };
-  mongodb?: {
-    uri: string;
-    database: string;
   };
 }
 
