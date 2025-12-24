@@ -17,7 +17,7 @@ export function isComponentType(value: unknown): value is ComponentType {
  */
 export function isScope(value: unknown): value is Scope {
   return typeof value === 'string' &&
-    ['user', 'project', 'local'].includes(value);
+    ['global', 'project', 'local'].includes(value);
 }
 
 /**
