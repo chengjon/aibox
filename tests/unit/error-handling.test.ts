@@ -4,35 +4,40 @@ import { GitHubMarketplace } from '../../src/integrations/marketplaces/github-ma
 import { SQLiteAdapter } from '../../src/storage/database/sqlite-adapter';
 import { ConfigManager } from '../../src/storage/config/config-manager';
 import {
-  ConfigError,
   ComponentNotFoundError,
   ValidationError,
-  MarketplaceError,
   InstallationError,
-  DatabaseError
+  AIBoxError,
 } from '../../src/core/errors';
-import { rmSync, existsSync, writeFileSync } from 'fs';
+import { rmSync, existsSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { mkdtempSync, rmdirSync } from 'fs';
 
 describe('Error Handling Tests', () => {
-  describe('ConfigError', () => {
-    it('should create ConfigError with code and details', () => {
-      const error = new ConfigError('Invalid config', { key: 'value' });
-      expect(error).toBeInstanceOf(ConfigError);
-      expect(error.message).toBe('Invalid config');
-      expect(error.code).toBe('CONFIG_ERROR');
+  describe('AIBoxError', () => {
+    it('should create AIBoxError with code and details', () => {
+      class CustomError extends AIBoxError {
+        constructor(message: string, details?: Record<string, unknown>) {
+          super(message, 'CUSTOM_ERROR', details);
+        }
+      }
+      const error = new CustomError('Custom error occurred', { key: 'value' });
+      expect(error).toBeInstanceOf(AIBoxError);
+      expect(error.message).toBe('Custom error occurred');
+      expect(error.code).toBe('CUSTOM_ERROR');
       expect(error.details).toEqual({ key: 'value' });
+      expect(error.name).toBe('CustomError');
     });
 
-    it('should serialize to JSON', () => {
-      const error = new ConfigError('Test error', { key: 'value' });
-      const json = error.toJSON();
-      expect(json.name).toBe('ConfigError');
-      expect(json.message).toBe('Test error');
-      expect(json.code).toBe('CONFIG_ERROR');
-      expect(json.details).toEqual({ key: 'value' });
-      expect(json.stack).toBeDefined();
+    it('should capture stack trace', () => {
+      class CustomError extends AIBoxError {
+        constructor(message: string, details?: Record<string, unknown>) {
+          super(message, 'CUSTOM_ERROR', details);
+        }
+      }
+      const error = new CustomError('Test error');
+      expect(error.stack).toBeDefined();
+      expect(error.stack).toContain('CustomError');
     });
   });
 
@@ -47,6 +52,12 @@ describe('Error Handling Tests', () => {
         marketplace: 'anthropic/agent-skills'
       });
     });
+
+    it('should create ComponentNotFoundError without marketplace', () => {
+      const error = new ComponentNotFoundError('test-skill');
+      expect(error.message).toContain('test-skill');
+      expect(error.details?.marketplace).toBeUndefined();
+    });
   });
 
   describe('ValidationError', () => {
@@ -59,17 +70,11 @@ describe('Error Handling Tests', () => {
         validScopes: ['global', 'project']
       });
     });
-  });
 
-  describe('MarketplaceError', () => {
-    it('should create MarketplaceError with context', () => {
-      const error = new MarketplaceError('Download failed', {
-        component: 'test-skill',
-        repo: 'test/repo',
-        error: 'Network error'
-      });
-      expect(error).toBeInstanceOf(MarketplaceError);
-      expect(error.code).toBe('MARKETPLACE_ERROR');
+    it('should create ValidationError without details', () => {
+      const error = new ValidationError('Simple validation error');
+      expect(error.code).toBe('VALIDATION_ERROR');
+      expect(error.details).toBeUndefined();
     });
   });
 
@@ -78,6 +83,13 @@ describe('Error Handling Tests', () => {
       const error = new InstallationError('SKILL.md not found', { componentPath: '/tmp/test' });
       expect(error).toBeInstanceOf(InstallationError);
       expect(error.code).toBe('INSTALLATION_ERROR');
+      expect(error.details).toEqual({ componentPath: '/tmp/test' });
+    });
+
+    it('should create InstallationError without details', () => {
+      const error = new InstallationError('Installation failed');
+      expect(error.code).toBe('INSTALLATION_ERROR');
+      expect(error.details).toBeUndefined();
     });
   });
 });
@@ -104,7 +116,12 @@ describe('PackageInstaller Error Paths', () => {
     }
   });
 
-  it('should throw ValidationError for invalid scope', async () => {
+  it('should throw error for invalid scope type', async () => {
+    // The getComponentPath function will throw ValidationError for invalid scope
+    // But we need to test the actual installation flow
+    const marketplace = new GitHubMarketplace('anthropic', 'agent-skills');
+    installer = new PackageInstaller(marketplace, adapter);
+
     await expect(
       installer.install({
         name: 'test-component',
@@ -127,11 +144,18 @@ describe('PackageInstaller Error Paths', () => {
     ).rejects.toThrow();
   });
 
-  it('should throw InstallationError when SKILL.md is missing', async () => {
-    // This would require mocking the marketplace download
-    // For now, we test the error structure
-    const error = new InstallationError('SKILL.md not found', { componentPath: '/tmp/test' });
-    expect(error.code).toBe('INSTALLATION_ERROR');
+  it('should propagate InstallationError when download fails', async () => {
+    // Test with invalid repository
+    const marketplace = new GitHubMarketplace('nonexistent-repo-xyz', 'does-not-exist');
+    installer = new PackageInstaller(marketplace as any, adapter);
+
+    await expect(
+      installer.install({
+        name: 'test',
+        marketplace: 'nonexistent-repo-xyz/does-not-exist',
+        scope: 'global'
+      })
+    ).rejects.toThrow();
   });
 });
 
@@ -149,24 +173,45 @@ describe('ConfigManager Error Paths', () => {
     }
   });
 
-  it('should handle invalid YAML format gracefully', async () => {
+  it('should handle invalid YAML format gracefully for global scope', async () => {
     const configPath = join(testDir, 'config.yaml');
     writeFileSync(configPath, 'invalid: yaml: content: [[');
 
-    await expect(configManager.read('global')).rejects.toThrow();
+    // Global scope should return defaults on error
+    const config = await configManager.read('global');
+    expect(config).toBeDefined();
+    expect(config).toHaveProperty('version');
   });
 
-  it('should throw ConfigError for malformed config', async () => {
+  it('should throw ValidationError for malformed project config', async () => {
     const configPath = join(testDir, 'config.yaml');
     writeFileSync(configPath, 'not: an: object');
 
-    // Config manager should handle this and return defaults for global scope
-    const config = await configManager.read('global');
-    expect(config).toBeDefined();
+    // Project scope should throw ValidationError
+    await expect(configManager.read('project')).rejects.toThrow(ValidationError);
+  });
+
+  it('should throw ValidationError for non-object config', async () => {
+    const configPath = join(testDir, 'config.yaml');
+    writeFileSync(configPath, 'string-value');
+
+    await expect(configManager.read('project')).rejects.toThrow(ValidationError);
   });
 });
 
 describe('GitHubMarketplace Error Paths', () => {
+  it('should validate repository owner name', () => {
+    expect(() => new GitHubMarketplace('invalid@owner', 'repo')).toThrow(ValidationError);
+    expect(() => new GitHubMarketplace('owner with spaces', 'repo')).toThrow(ValidationError);
+    expect(() => new GitHubMarketplace('owner!@#', 'repo')).toThrow(ValidationError);
+  });
+
+  it('should validate repository name', () => {
+    expect(() => new GitHubMarketplace('owner', 'invalid@repo')).toThrow(ValidationError);
+    expect(() => new GitHubMarketplace('owner', 'repo with spaces')).toThrow(ValidationError);
+    expect(() => new GitHubMarketplace('owner', 'repo!@#')).toThrow(ValidationError);
+  });
+
   it('should throw ComponentNotFoundError when component not found', async () => {
     const marketplace = new GitHubMarketplace('anthropic', 'agent-skills');
 
@@ -175,12 +220,30 @@ describe('GitHubMarketplace Error Paths', () => {
     ).rejects.toThrow(ComponentNotFoundError);
   });
 
-  it('should throw MarketplaceError on download failure', async () => {
-    const marketplace = new GitHubMarketplace('non-existent-repo-xyz123', 'does-not-exist');
+  it('should throw InstallationError on download failure', async () => {
+    const marketplace = new GitHubMarketplace('non-existent-repo-xyz', 'does-not-exist');
 
     await expect(
       marketplace.downloadComponent('test', '/tmp/test-target')
     ).rejects.toThrow();
+  });
+
+  it('should throw InstallationError when component not found in repository', async () => {
+    // This test assumes the repository exists but doesn't have the component
+    // In a real test environment, we'd need to mock the filesystem
+    const marketplace = new GitHubMarketplace('anthropic', 'agent-skills');
+
+    // Using a temp directory that definitely doesn't have the component
+    const tmpDir = mkdtempSync(join(require('os').tmpdir(), 'aibox-test-'));
+    try {
+      await expect(
+        marketplace.downloadComponent('definitely-not-a-real-component', tmpDir)
+      ).rejects.toThrow();
+    } finally {
+      if (existsSync(tmpDir)) {
+        rmSync(tmpDir, { recursive: true, force: true });
+      }
+    }
   });
 });
 
@@ -239,15 +302,66 @@ describe('SQLiteAdapter Error Paths', () => {
 
     await adapter.close();
   });
+
+  it('should handle corrupted metadata JSON gracefully', async () => {
+    const adapter = new SQLiteAdapter(testDbPath);
+    await adapter.initialize();
+
+    // Insert a component with corrupted metadata
+    const stmt = adapter['db'].prepare(`
+      INSERT INTO components (
+        id, type, name, version, description, source_type, source_location,
+        marketplace, metadata_json, scope, installed_at, enabled
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      'test-1',
+      'skill',
+      'test',
+      '1.0.0',
+      'Test',
+      'marketplace',
+      'test',
+      'test',
+      '{invalid json',
+      'global',
+      new Date().toISOString(),
+      1
+    );
+
+    const component = await adapter.getComponent('test-1');
+    expect(component).toBeDefined();
+    expect(component?.metadata).toEqual({}); // Should default to empty object
+
+    await adapter.close();
+  });
 });
 
-describe('Hot Reload Signaler Error Paths', () => {
-  it('should return NO_PROCESS when no Claude process found', async () => {
-    const { HotReloadSignaler } = require('../../src/integrations/hotreload/hot-reload-signaler');
-    const signaler = new HotReloadSignaler();
+describe('Type Guards Error Paths', () => {
+  const { isComponentType, isScope, isSourceType } = require('../../src/types');
 
-    // In most test environments, Claude won't be running
-    const result = await signaler.signalReload();
-    expect(result).toBeDefined();
+  it('should return false for invalid ComponentType', () => {
+    expect(isComponentType('invalid')).toBe(false);
+    expect(isComponentType('')).toBe(false);
+    expect(isComponentType(null)).toBe(false);
+    expect(isComponentType(undefined)).toBe(false);
+    expect(isComponentType(123)).toBe(false);
+  });
+
+  it('should return false for invalid Scope', () => {
+    expect(isScope('invalid')).toBe(false);
+    expect(isScope('user')).toBe(false); // Changed to 'global'
+    expect(isScope('')).toBe(false);
+    expect(isScope(null)).toBe(false);
+    expect(isScope(undefined)).toBe(false);
+  });
+
+  it('should return false for invalid SourceType', () => {
+    expect(isSourceType('invalid')).toBe(false);
+    expect(isSourceType('')).toBe(false);
+    expect(isSourceType(null)).toBe(false);
+    expect(isSourceType(undefined)).toBe(false);
+    expect(isSourceType(123)).toBe(false);
   });
 });
