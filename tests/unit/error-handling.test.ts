@@ -126,7 +126,7 @@ describe('PackageInstaller Error Paths', () => {
       installer.install({
         name: 'test-component',
         marketplace: 'default',
-        scope: 'invalid' as any
+        scope: 'invalid' as 'global' | 'project' | 'local'
       })
     ).rejects.toThrow();
   });
@@ -147,7 +147,7 @@ describe('PackageInstaller Error Paths', () => {
   it('should propagate InstallationError when download fails', async () => {
     // Test with invalid repository
     const marketplace = new GitHubMarketplace('nonexistent-repo-xyz', 'does-not-exist');
-    installer = new PackageInstaller(marketplace as any, adapter);
+    installer = new PackageInstaller(marketplace, adapter);
 
     await expect(
       installer.install({

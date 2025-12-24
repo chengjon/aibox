@@ -10,6 +10,8 @@ import { ComponentNotFoundError, InstallationError, ValidationError } from '../.
 const REPO_NAME_REGEX = /^[a-zA-Z0-9_-]+$/;
 
 export class GitHubMarketplace {
+  private componentsCache: ComponentInfo[] | null = null;
+
   constructor(
     private owner: string,
     private repo: string,
@@ -45,6 +47,11 @@ export class GitHubMarketplace {
   }
 
   async listComponents(): Promise<ComponentInfo[]> {
+    // Return cached components if available
+    if (this.componentsCache) {
+      return this.componentsCache;
+    }
+
     const metadata = await this.getMetadata();
     const components: ComponentInfo[] = [];
 
@@ -62,10 +69,13 @@ export class GitHubMarketplace {
       }
     }
 
+    // Cache the components
+    this.componentsCache = components;
     return components;
   }
 
   async getComponent(name: string): Promise<ComponentInfo> {
+    // Use cached list to avoid fetching all components
     const components = await this.listComponents();
     const component = components.find(c => c.name === name);
 

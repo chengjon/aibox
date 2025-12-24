@@ -9,6 +9,12 @@ import { getLogger } from '../../core/logger';
 
 const logger = getLogger();
 
+// Configuration constants
+/** Default cache time-to-live in seconds */
+const DEFAULT_CACHE_TTL_SECONDS = 3600;
+/** Default maximum cache size */
+const DEFAULT_CACHE_MAX_SIZE = 100;
+
 const DEFAULT_CONFIG: Config = {
   version: '1.0',
   database: {
@@ -24,8 +30,8 @@ const DEFAULT_CONFIG: Config = {
     }
   ],
   cache: {
-    ttl: 3600,
-    maxSize: 100
+    ttl: DEFAULT_CACHE_TTL_SECONDS,
+    maxSize: DEFAULT_CACHE_MAX_SIZE
   },
   hotReload: {
     enabled: true,
@@ -39,14 +45,29 @@ const DEFAULT_CONFIG: Config = {
   }
 };
 
+/**
+ * Configuration manager for global and project-scoped settings
+ *
+ * Handles loading, saving, and accessing configuration values
+ * from YAML files with support for nested key access.
+ */
 export class ConfigManager {
   private actualConfigDir: string;
 
+  /**
+   * Create a new ConfigManager
+   * @param configDir - Directory containing config files (supports ~ expansion)
+   */
   constructor(configDir: string) {
     // Expand tilde if present
     this.actualConfigDir = expandTilde(configDir);
   }
 
+  /**
+   * Read configuration from file
+   * @param scope - Configuration scope ('global' or 'project')
+   * @returns Configuration object or defaults if file doesn't exist
+   */
   async read(scope: 'global' | 'project'): Promise<Config | ProjectConfig> {
     const configPath = this.getConfigPath(scope);
 
@@ -76,12 +97,24 @@ export class ConfigManager {
     }
   }
 
+  /**
+   * Write configuration to file
+   * @param config - Configuration object to write
+   * @param scope - Configuration scope ('global' or 'project')
+   */
   async write(config: Config | ProjectConfig, scope: 'global' | 'project'): Promise<void> {
     const configPath = this.getConfigPath(scope);
     const content = yaml.dump(config);
     writeFileSync(configPath, content, 'utf-8');
   }
 
+  /**
+   * Get a nested configuration value by dot-separated key
+   * @param key - Dot-separated key path (e.g., 'cache.ttl')
+   * @param defaultValue - Default value if key not found
+   * @param scope - Configuration scope ('global' or 'project')
+   * @returns The configuration value or default
+   */
   async get<T>(key: string, defaultValue?: T, scope: 'global' | 'project' = 'global'): Promise<T> {
     const config = await this.read(scope);
     const keys = key.split('.');
@@ -99,6 +132,12 @@ export class ConfigManager {
     return (value ?? defaultValue) as T;
   }
 
+  /**
+   * Set a nested configuration value by dot-separated key
+   * @param key - Dot-separated key path (e.g., 'cache.ttl')
+   * @param value - Value to set
+   * @param scope - Configuration scope ('global' or 'project')
+   */
   async set<T>(key: string, value: T, scope: 'global' | 'project' = 'global'): Promise<void> {
     const config = await this.read(scope);
     const keys = key.split('.');

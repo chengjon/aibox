@@ -22,6 +22,12 @@ export interface MigrationRecord {
   appliedAt: string;
 }
 
+interface MigrationRow {
+  version: number;
+  name: string;
+  applied_at: string;
+}
+
 const MIGRATIONS_TABLE = `
   CREATE TABLE IF NOT EXISTS _schema_migrations (
     version INTEGER PRIMARY KEY,
@@ -66,7 +72,7 @@ export class MigrationRunner {
   getAppliedMigrations(): MigrationRecord[] {
     const rows = this.db
       .prepare('SELECT version, name, applied_at FROM _schema_migrations ORDER BY version')
-      .all() as any[];
+      .all() as MigrationRow[];
     return rows.map(row => ({
       version: row.version,
       name: row.name,

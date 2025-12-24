@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { ComponentInfo } from '../../src/types';
+import { ComponentInfo, Component, Config, ProjectConfig } from '../../src/types';
 
 /**
  * Mock for GitHubMarketplace
@@ -62,11 +62,11 @@ export function createMockGitHubMarketplaceWithError(error: Error) {
  * Mock for SQLiteAdapter
  */
 export function createMockSQLiteAdapter() {
-  const components: any[] = [];
+  const components: Component[] = [];
 
   return {
     initialize: vi.fn().mockResolvedValue(undefined),
-    addComponent: vi.fn().mockImplementation((component: any) => {
+    addComponent: vi.fn().mockImplementation((component: Component) => {
       components.push(component);
       return Promise.resolve();
     }),
@@ -111,32 +111,32 @@ export const mockConfig = {
 };
 
 export function createMockConfigManager() {
-  let config: any = { ...mockConfig };
+  let config: Config = { ...mockConfig };
 
   return {
-    read: vi.fn().mockImplementation((scope: string) => {
+    read: vi.fn().mockImplementation((scope: 'global' | 'project') => {
       return Promise.resolve(config);
     }),
-    write: vi.fn().mockImplementation((newConfig: any, scope: string) => {
-      config = newConfig;
+    write: vi.fn().mockImplementation((newConfig: Config | ProjectConfig, scope: 'global' | 'project') => {
+      config = newConfig as Config;
       return Promise.resolve();
     }),
-    get: vi.fn().mockImplementation((key: string, defaultValue?: any, scope?: string) => {
+    get: vi.fn().mockImplementation(<T,>(key: string, defaultValue?: T, scope?: 'global' | 'project') => {
       const keys = key.split('.');
-      let value: any = config;
+      let value: unknown = config;
       for (const k of keys) {
-        value = value?.[k];
+        value = (value as Record<string, unknown>)?.[k];
       }
-      return Promise.resolve(value ?? defaultValue);
+      return Promise.resolve((value ?? defaultValue) as T);
     }),
-    set: vi.fn().mockImplementation((key: string, value: any, scope?: string) => {
+    set: vi.fn().mockImplementation(<T,>(key: string, value: T, scope?: 'global' | 'project') => {
       const keys = key.split('.');
-      let current: any = config;
+      let current: Record<string, unknown> = config as Record<string, unknown>;
       for (let i = 0; i < keys.length - 1; i++) {
         if (!current[keys[i]]) {
           current[keys[i]] = {};
         }
-        current = current[keys[i]];
+        current = current[keys[i]] as Record<string, unknown>;
       }
       current[keys[keys.length - 1]] = value;
       return Promise.resolve();

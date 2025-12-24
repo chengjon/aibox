@@ -5,7 +5,10 @@ import {
   createMockGitHubMarketplaceWithError,
   mockComponentInfo
 } from '../mocks/github-marketplace.mock';
-import { ComponentNotFoundError, MarketplaceError } from '../../src/core/errors';
+import { ComponentNotFoundError, InstallationError } from '../../src/core/errors';
+import { GitHubMarketplace } from '../../src/integrations/marketplaces/github-marketplace';
+import { SQLiteAdapter } from '../../src/storage/database/sqlite-adapter';
+import { createMockSQLiteAdapter } from '../mocks/github-marketplace.mock';
 
 describe('PackageInstaller with Mocked Dependencies', () => {
   describe('successful installation with mocks', () => {
@@ -15,8 +18,8 @@ describe('PackageInstaller with Mocked Dependencies', () => {
     beforeEach(() => {
       // Create installer with mocked dependencies
       installer = new PackageInstaller(
-        mocks.marketplace as any,
-        mocks.dbAdapter as any
+        mocks.marketplace as unknown as GitHubMarketplace,
+        mocks.dbAdapter as unknown as SQLiteAdapter
       );
     });
 
@@ -50,13 +53,13 @@ describe('PackageInstaller with Mocked Dependencies', () => {
   describe('error handling with mocked errors', () => {
     it('should handle marketplace errors', async () => {
       const errorMarketplace = createMockGitHubMarketplaceWithError(
-        new MarketplaceError('Network error')
+        new InstallationError('Network error')
       );
-      const errorDb = setupTestMocks().dbAdapter;
+      const errorDb = createMockSQLiteAdapter();
 
       const installer = new PackageInstaller(
-        errorMarketplace as any,
-        errorDb as any
+        errorMarketplace as unknown as GitHubMarketplace,
+        errorDb as unknown as SQLiteAdapter
       );
 
       // Attempt to install non-existent component
@@ -73,11 +76,11 @@ describe('PackageInstaller with Mocked Dependencies', () => {
       const notFoundMarketplace = createMockGitHubMarketplaceWithError(
         new ComponentNotFoundError('missing-component')
       );
-      const errorDb = setupTestMocks().dbAdapter;
+      const errorDb = createMockSQLiteAdapter();
 
       const installer = new PackageInstaller(
-        notFoundMarketplace as any,
-        errorDb as any
+        notFoundMarketplace as unknown as GitHubMarketplace,
+        errorDb as unknown as SQLiteAdapter
       );
 
       await expect(
