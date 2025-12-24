@@ -46,8 +46,23 @@ export class ConfigManager {
       return this.getDefaultProjectConfig();
     }
 
-    const content = readFileSync(configPath, 'utf-8');
-    return yaml.load(content) as Config | ProjectConfig;
+    try {
+      const content = readFileSync(configPath, 'utf-8');
+      const config = yaml.load(content);
+
+      // Basic validation
+      if (!config || typeof config !== 'object') {
+        throw new Error('Invalid config format');
+      }
+
+      return config as Config | ProjectConfig;
+    } catch (error) {
+      if (scope === 'global') {
+        console.warn(`Failed to load config from ${configPath}, using defaults: ${error}`);
+        return DEFAULT_CONFIG;
+      }
+      throw new Error(`Failed to load project config: ${error}`);
+    }
   }
 
   async write(config: Config | ProjectConfig, scope: 'global' | 'project'): Promise<void> {
