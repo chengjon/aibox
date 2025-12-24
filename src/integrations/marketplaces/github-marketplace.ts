@@ -5,14 +5,31 @@ import { execSync } from 'child_process';
 import { existsSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { ComponentNotFoundError, MarketplaceError } from '../../core/errors';
+import { ComponentNotFoundError, MarketplaceError, ValidationError } from '../../core/errors';
+
+// Validate GitHub repository name format (alphanumeric, hyphens, underscores)
+const REPO_NAME_REGEX = /^[a-zA-Z0-9_-]+$/;
 
 export class GitHubMarketplace implements MarketplaceClient {
   constructor(
     private owner: string,
     private repo: string,
     private githubToken?: string
-  ) {}
+  ) {
+    // Validate repository format to prevent command injection
+    if (!REPO_NAME_REGEX.test(owner)) {
+      throw new ValidationError(`Invalid owner name: ${owner}`, {
+        owner,
+        pattern: REPO_NAME_REGEX.toString()
+      });
+    }
+    if (!REPO_NAME_REGEX.test(repo)) {
+      throw new ValidationError(`Invalid repository name: ${repo}`, {
+        repo,
+        pattern: REPO_NAME_REGEX.toString()
+      });
+    }
+  }
 
   async getMetadata(): Promise<MarketplaceMetadata> {
     const url = `https://api.github.com/repos/${this.owner}/${this.repo}/contents/.claude-plugin/marketplace.json`;

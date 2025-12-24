@@ -1,5 +1,6 @@
 import { join, homedir } from 'path';
 import { homedir as osHomedir } from 'os';
+import { ValidationError } from '../errors';
 
 /**
  * Centralized path management for AIBox
@@ -10,10 +11,6 @@ export const AIBOX_HOME = join(homedir(), '.aibox');
 export const CLAUDE_DIR = '.claude';
 
 // Path getters
-export function getHomeDir(): string {
-  return osHomedir();
-}
-
 export function getAIBoxHome(): string {
   return AIBOX_HOME;
 }
@@ -35,7 +32,10 @@ export function getComponentsDir(scope: 'global' | 'project' | 'local'): string 
     case 'local':
       return join(process.cwd(), '.aibox', 'components');
     default:
-      throw new Error(`Invalid scope: ${scope}`);
+      throw new ValidationError(`Invalid scope: ${scope}`, {
+        scope,
+        validScopes: ['global', 'project', 'local']
+      });
   }
 }
 

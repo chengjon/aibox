@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PackageInstaller } from '../../src/core/installer/package-installer';
 import {
   setupTestMocks,
@@ -26,9 +26,9 @@ describe('PackageInstaller with Mocked Dependencies', () => {
       mocks.marketplace.downloadComponent.mockResolvedValue(undefined);
 
       // Mock file system operations
-      const mockMkdirSync = jest.fn();
-      const mockExecSync = jest.fn();
-      const mockExistsSync = jest.fn().mockReturnValue(true);
+      const mockMkdirSync = vi.fn();
+      const mockExecSync = vi.fn();
+      const mockExistsSync = vi.fn().mockReturnValue(true);
 
       // This test verifies the structure works with mocks
       expect(installer).toBeDefined();

@@ -4,6 +4,11 @@ import { join } from 'path';
 import { platform } from 'os';
 import { getHotReloadMarkerPath } from '../../core/paths';
 
+// Constants for timeout and polling intervals
+const SIGNAL_TIMEOUT_MS = 5000;
+const POLL_INTERVAL_MS = 100;
+const AWAIT_RELOAD_DELAY_MS = 1000;
+
 export enum ReloadResult {
   SUCCESS = 'success',
   NO_PROCESS = 'no_process',
@@ -24,7 +29,14 @@ export class HotReloadSignaler {
     try {
       if (platform() === 'win32') {
         // Windows: Use tasklist to find node.exe processes
-        const output = execSync('tasklist /FI "IMAGENAME eq node.exe" /FO CSV /NH', { encoding: 'utf-8' });
+        let output: string;
+        try {
+          output = execSync('tasklist /FI "IMAGENAME eq node.exe" /FO CSV /NH', { encoding: 'utf-8' });
+        } catch (error) {
+          // tasklist command failed - return null instead of throwing
+          return null;
+        }
+
         const lines = output.trim().split('\n').filter(Boolean);
 
         for (const line of lines) {
@@ -80,22 +92,35 @@ export class HotReloadSignaler {
   async awaitReload(timeout: number): Promise<boolean> {
     // Wait for reload confirmation
     // This is a simplified version
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, AWAIT_RELOAD_DELAY_MS));
     return true;
   }
 
   private async signalViaFile(projectPath: string): Promise<ReloadResult> {
+    const markerPath = getHotReloadMarkerPath(projectPath);
+
     try {
-      const markerPath = getHotReloadMarkerPath(projectPath);
+      // Write marker file
       writeFileSync(markerPath, Date.now().toString());
 
       // Wait for file to be deleted (Claude Code picks it up)
       const startTime = Date.now();
-      while (existsSync(markerPath) && Date.now() - startTime < 5000) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+      while (existsSync(markerPath) && Date.now() - startTime < SIGNAL_TIMEOUT_MS) {
+        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
       }
 
-      return existsSync(markerPath) ? ReloadResult.TIMEOUT : ReloadResult.SUCCESS;
+      // Clean up marker file if it still exists (timeout case)
+      if (existsSync(markerPath)) {
+        try {
+          const { unlinkSync } = require('fs');
+          unlinkSync(markerPath);
+        } catch {
+          // Ignore cleanup errors
+        }
+        return ReloadResult.TIMEOUT;
+      }
+
+      return ReloadResult.SUCCESS;
     } catch {
       return ReloadResult.ERROR;
     }
